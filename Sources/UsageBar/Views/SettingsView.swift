@@ -1,3 +1,4 @@
+import ServiceManagement
 import SwiftUI
 
 struct SettingsView: View {
@@ -7,9 +8,34 @@ struct SettingsView: View {
     @State private var pendingAction: BridgeInstaller.Action?
     @State private var running = false
     @State private var output: BridgeInstaller.Output?
+    @State private var loginStatus = LaunchAtLogin.status
+    @State private var loginError: String?
 
     var body: some View {
         Form {
+            Section("Geral") {
+                Toggle("Abrir ao iniciar sessão", isOn: launchAtLogin)
+                    .disabled(!LaunchAtLogin.isAvailable)
+                if !LaunchAtLogin.isAvailable {
+                    Text("Disponível no UsageBar.app instalado pelo build-app.sh.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if loginStatus == .requiresApproval {
+                    HStack {
+                        Text("Aprove o UsageBar nos Itens de Início.")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                        Spacer()
+                        Button("Abrir Ajustes") { SMAppService.openSystemSettingsLoginItems() }
+                    }
+                }
+                if let loginError {
+                    Text(loginError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+            }
+
             Section("Statusline do Claude Code") {
                 LabeledContent("Bridge") {
                     Label(bridgeInstalled ? "Instalado" : "Não instalado",
@@ -48,13 +74,30 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .frame(width: 460)
         .fixedSize(horizontal: false, vertical: true)
-        .onAppear { bridgeInstalled = BridgeInstaller.isInstalled() }
+        .onAppear {
+            bridgeInstalled = BridgeInstaller.isInstalled()
+            loginStatus = LaunchAtLogin.status
+        }
         .alert(alertTitle, isPresented: isConfirming, presenting: pendingAction) { action in
             Button(action == .install ? "Configurar" : "Remover") { perform(action) }
             Button("Cancelar", role: .cancel) {}
         } message: { action in
             Text(alertMessage(for: action))
         }
+    }
+
+    private var launchAtLogin: Binding<Bool> {
+        Binding(
+            get: { loginStatus == .enabled || loginStatus == .requiresApproval },
+            set: { enabled in
+                do {
+                    try LaunchAtLogin.setEnabled(enabled)
+                    loginError = nil
+                } catch {
+                    loginError = error.localizedDescription
+                }
+                loginStatus = LaunchAtLogin.status
+            })
     }
 
     private var isConfirming: Binding<Bool> {
