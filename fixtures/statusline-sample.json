@@ -1,0 +1,75 @@
+{
+  "session_id": "00000000-0000-0000-0000-000000000000",
+  "transcript_path": "/Users/usuario/.claude/projects/-Users-usuario-projects-UsageBar/00000000-0000-0000-0000-000000000000.jsonl",
+  "cwd": "/Users/usuario/projects/UsageBar",
+  "scratchpad_dir": "/private/tmp/claude-501/-Users-usuario-projects-UsageBar/00000000-0000-0000-0000-000000000000/scratchpad",
+  "prompt_id": "00000000-0000-0000-0000-000000000000",
+  "effort": {
+    "level": "xhigh"
+  },
+  "session_name": "exemplo",
+  "model": {
+    "id": "claude-opus-5-5",
+    "display_name": "Opus 5.5"
+  },
+  "workspace": {
+    "current_dir": "/Users/usuario/projects/UsageBar",
+    "project_dir": "/Users/usuario/projects/UsageBar",
+    "added_dirs": []
+  },
+  "version": "2.1.300",
+  "output_style": {
+    "name": "default"
+  },
+  "cost": {
+    "total_cost_usd": 1.8281780000000003,
+    "total_duration_ms": 1893891,
+    "total_api_duration_ms": 437748,
+    "total_lines_added": 86,
+    "total_lines_removed": 0
+  },
+  "context_window": {
+    "total_input_tokens": 110224,
+    "total_output_tokens": 670,
+    "context_window_size": 1000000,
+    "current_usage": {
+      "input_tokens": 2,
+      "output_tokens": 670,
+      "cache_creation_input_tokens": 3907,
+      "cache_read_input_tokens": 106315
+    },
+    "used_percentage": 11,
+    "remaining_percentage": 89
+  },
+  "exceeds_200k_tokens": false,
+  "prompt_cache": {
+    "warm": true,
+    "caching_observed": true,
+    "ttl": "1h",
+    "expires_at": 1792082438,
+    "requests": 18,
+    "misses": 0,
+    "expected_rebuilds": 0,
+    "hit_ratio": 0.9413145607666827,
+    "cache_write_tokens": 81283,
+    "miss_recache_tokens": 0,
+    "last_miss_at": null,
+    "last_miss_cause": null,
+    "miss_causes": {},
+    "recache_tokens_if_cold": 110224
+  },
+  "fast_mode": false,
+  "thinking": {
+    "enabled": true
+  },
+  "rate_limits": {
+    "five_hour": {
+      "used_percentage": 19,
+      "resets_at": 1792086600
+    },
+    "seven_day": {
+      "used_percentage": 50,
+      "resets_at": 1792274400
+    }
+  }
+}
