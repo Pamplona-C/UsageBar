@@ -64,7 +64,8 @@ mais recente em dados.
 1. Para cada janela, se o `resets_at` recebido for mais novo (diferença acima de 5 min), é uma janela nova: o valor
    recebido substitui o atual.
 2. Se for a mesma janela, fica o **maior** `used_percentage` (dentro de uma janela o uso só sobe).
-3. "Atualizado há X min" só avança quando o payload recebido não é mais antigo que o que o app já tem.
+3. "Atualizado há X min" só avança quando nenhuma janela do payload é mais antiga que a do app. Basta uma janela
+   mais antiga para denunciar uma sessão parada, mesmo que a outra coincida (a semanal costuma coincidir).
 4. Se o `resets_at` de uma janela já passou, a janela é exibida como reiniciada (0%).
 
 ## Outros campos de topo (não usados)

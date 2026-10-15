@@ -36,6 +36,17 @@ final class UsageStateTests: XCTestCase {
         XCTAssertEqual(state.updatedAt, t0, "payload antigo não conta como atualização")
     }
 
+    /// Visto com o app rodando: a janela semanal da sessão parada coincidia e avançava o "atualizado".
+    func testStaleSessionWithMatchingWeeklyDoesNotRefreshUpdatedAt() {
+        var state = UsageState()
+        state.absorb(snapshot(fiveHour: 23, sevenDay: 50), receivedAt: t0)
+
+        state.absorb(snapshot(fiveHour: 5, sevenDay: 50), receivedAt: t0 + 60)
+
+        XCTAssertEqual(state.fiveHour?.usedPercentage, 23)
+        XCTAssertEqual(state.updatedAt, t0)
+    }
+
     func testHigherValueInSameWindowIsAccepted() {
         var state = UsageState()
         state.absorb(snapshot(fiveHour: 16), receivedAt: t0)

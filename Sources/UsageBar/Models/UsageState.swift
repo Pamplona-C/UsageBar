@@ -24,25 +24,24 @@ struct UsageState: Codable, Equatable {
 
     mutating func absorb(_ snapshot: UsageSnapshot, receivedAt: Date) {
         guard let limits = snapshot.rateLimits else { return }
-        let fiveHourFresh = Self.merge(limits.fiveHour, into: &fiveHour)
-        let sevenDayFresh = Self.merge(limits.sevenDay, into: &sevenDay)
-        if fiveHourFresh || sevenDayFresh {
+        let results = [
+            Self.merge(limits.fiveHour, into: &fiveHour),
+            Self.merge(limits.sevenDay, into: &sevenDay),
+        ].compactMap { $0 }
+        // Uma janela mais antiga denuncia uma sessão parada, mesmo que a outra janela coincida.
+        if !results.isEmpty && !results.contains(.older) {
             updatedAt = max(updatedAt ?? receivedAt, receivedAt)
         }
     }
 
-    /// Aplica `incoming` sobre `current` e diz se o payload era atual (não mais antigo).
-    private static func merge(_ incoming: UsageWindow?, into current: inout UsageWindow?) -> Bool {
-        guard let incoming else { return false }
-        switch compare(incoming, to: current) {
-        case .newer:
+    /// Aplica `incoming` sobre `current` quando for mais recente; `nil` se a janela não veio no payload.
+    private static func merge(_ incoming: UsageWindow?, into current: inout UsageWindow?) -> Freshness? {
+        guard let incoming else { return nil }
+        let freshness = compare(incoming, to: current)
+        if freshness == .newer {
             current = incoming
-            return true
-        case .same:
-            return true
-        case .older:
-            return false
         }
+        return freshness
     }
 
     enum Freshness { case newer, same, older }
