@@ -17,9 +17,14 @@ struct UsagePopover: View {
                 WindowRow(title: "Janela de 5h", window: state.fiveHour, now: now)
                 WindowRow(title: "Semanal", window: state.sevenDay, now: now)
             } else {
-                Label("Sem dados ainda — use o Claude Code uma vez", systemImage: "hourglass")
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("Sem dados ainda — use o Claude Code uma vez", systemImage: "hourglass")
+                        .foregroundStyle(.secondary)
+                    Text("Se ainda não configurou, abra Configurações → Configurar statusline.")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                .fixedSize(horizontal: false, vertical: true)
             }
 
             Divider()
