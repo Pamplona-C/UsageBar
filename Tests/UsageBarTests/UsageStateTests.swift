@@ -143,6 +143,90 @@ final class UsageStateTests: XCTestCase {
         XCTAssertEqual(decoded, state)
     }
 
+    // MARK: - Consulta ao servidor
+
+    private func reading(fiveHour: Double?, sevenDay: Double? = nil) -> RateLimits {
+        RateLimits(fiveHour: fiveHour.map { UsageWindow(usedPercentage: $0, resetsAt: reset5h) },
+                   sevenDay: sevenDay.map { UsageWindow(usedPercentage: $0, resetsAt: reset7d) })
+    }
+
+    /// O servidor é a referência: vale mesmo abaixo do que o bridge mostrou (ex.: reset de limite concedido).
+    func testServerReadingReplacesEvenLowerValues() {
+        var state = UsageState()
+        state.absorb(snapshot(fiveHour: 40, sevenDay: 60), receivedAt: t0)
+
+        state.applyServerReading(reading(fiveHour: 0, sevenDay: 55), checkedAt: t0 + 60)
+
+        XCTAssertEqual(state.fiveHour?.usedPercentage, 0)
+        XCTAssertEqual(state.sevenDay?.usedPercentage, 55)
+        XCTAssertEqual(state.updatedAt, t0 + 60)
+        XCTAssertEqual(state.serverCheckedAt, t0 + 60)
+    }
+
+    func testServerReadingWithoutWindowKeepsKnownValue() {
+        var state = UsageState()
+        state.absorb(snapshot(fiveHour: 16, sevenDay: 50), receivedAt: t0)
+
+        state.applyServerReading(reading(fiveHour: nil, sevenDay: 52), checkedAt: t0 + 60)
+
+        XCTAssertEqual(state.fiveHour?.usedPercentage, 16)
+        XCTAssertEqual(state.sevenDay?.usedPercentage, 52)
+    }
+
+    /// O timer relê o mesmo `state.json` a cada 30 s: ele não pode desfazer a leitura do servidor.
+    func testPayloadWrittenBeforeServerReadingIsIgnored() {
+        var state = UsageState()
+        state.applyServerReading(reading(fiveHour: 0), checkedAt: t0 + 60)
+
+        state.absorb(snapshot(fiveHour: 40), receivedAt: t0)
+        state.absorb(snapshot(fiveHour: 40), receivedAt: t0 + 60)
+
+        XCTAssertEqual(state.fiveHour?.usedPercentage, 0)
+        XCTAssertEqual(state.updatedAt, t0 + 60)
+    }
+
+    func testPayloadAfterServerReadingFollowsSessionRules() {
+        var state = UsageState()
+        state.applyServerReading(reading(fiveHour: 25), checkedAt: t0)
+
+        state.absorb(snapshot(fiveHour: 5), receivedAt: t0 + 30)
+        XCTAssertEqual(state.fiveHour?.usedPercentage, 25, "sessão parada continua ignorada")
+
+        state.absorb(snapshot(fiveHour: 27), receivedAt: t0 + 60)
+        XCTAssertEqual(state.fiveHour?.usedPercentage, 27)
+        XCTAssertEqual(state.updatedAt, t0 + 60)
+    }
+
+    func testRealReportFeedsState() throws {
+        var state = UsageState()
+        state.absorb(try StateFile.parse(Fixture.data()), receivedAt: t0)
+
+        state.applyServerReading(try UsageReport.parse(Data(contentsOf: UsageReportTests.fixtureURL)),
+                                 checkedAt: t0 + 60)
+
+        XCTAssertEqual(state.fiveHour?.usedPercentage, 25)
+        XCTAssertEqual(state.sevenDay?.usedPercentage, 56)
+    }
+
+    /// Cache gravado por uma versão sem `serverCheckedAt`.
+    func testCacheFromPreviousVersionStillDecodes() throws {
+        let old = Data(#"{"fiveHour":{"used_percentage":19,"resets_at":1792086600},"updatedAt":0}"#.utf8)
+
+        let state = try JSONDecoder().decode(UsageState.self, from: old)
+
+        XCTAssertEqual(state.fiveHour?.usedPercentage, 19)
+        XCTAssertNil(state.serverCheckedAt)
+    }
+
+    func testServerStateRoundTripsThroughCodable() throws {
+        var state = UsageState()
+        state.applyServerReading(reading(fiveHour: 25.5, sevenDay: 56), checkedAt: t0)
+
+        let decoded = try JSONDecoder().decode(UsageState.self, from: JSONEncoder().encode(state))
+
+        XCTAssertEqual(decoded, state)
+    }
+
     // MARK: - Exibição
 
     func testStaleAfterOneHour() {

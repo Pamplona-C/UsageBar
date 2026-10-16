@@ -1,14 +1,17 @@
 import Foundation
 
-/// Melhor leitura conhecida dos limites, combinando payloads de várias sessões do Claude Code.
+/// Melhor leitura conhecida dos limites, combinando a consulta ao servidor e os payloads das sessões.
 ///
-/// Uma sessão parada repete o valor da última resposta que recebeu, então a última gravação de
-/// `state.json` nem sempre é a mais recente em dados. Regra completa em `docs/payload.md`.
+/// A consulta ao `/usage` é a referência. Entre uma consulta e outra, valem os payloads da statusline, mas uma
+/// sessão parada repete o valor da última resposta que recebeu, então a última gravação de `state.json` nem
+/// sempre é a mais recente em dados. Regras completas em `docs/payload.md` e `docs/usage-report.md`.
 struct UsageState: Codable, Equatable {
     var fiveHour: UsageWindow?
     var sevenDay: UsageWindow?
-    /// Quando chegou o último payload que não era mais antigo que o estado atual.
+    /// Quando chegou o último dado que não era mais antigo que o estado atual.
     var updatedAt: Date?
+    /// Início da última consulta ao servidor que deu certo.
+    var serverCheckedAt: Date?
 
     /// Diferença de `resets_at` abaixo da qual dois payloads são considerados da mesma janela.
     static let sameWindowTolerance: TimeInterval = 5 * 60
@@ -22,8 +25,11 @@ struct UsageState: Codable, Equatable {
         return now.timeIntervalSince(updatedAt) > Self.staleAfter
     }
 
+    /// Aplica um payload da statusline gravado em `receivedAt`.
     mutating func absorb(_ snapshot: UsageSnapshot, receivedAt: Date) {
         guard let limits = snapshot.rateLimits else { return }
+        // Gravado antes da última consulta: o servidor já sabia mais que ele.
+        if let serverCheckedAt, receivedAt <= serverCheckedAt { return }
         let results = [
             Self.merge(limits.fiveHour, into: &fiveHour),
             Self.merge(limits.sevenDay, into: &sevenDay),
@@ -32,6 +38,15 @@ struct UsageState: Codable, Equatable {
         if !results.isEmpty && !results.contains(.older) {
             updatedAt = max(updatedAt ?? receivedAt, receivedAt)
         }
+    }
+
+    /// Aplica a leitura do servidor feita a partir de `checkedAt`. Ela substitui os valores conhecidos mesmo
+    /// quando é menor, como depois de um reset de limite concedido pela Anthropic.
+    mutating func applyServerReading(_ limits: RateLimits, checkedAt: Date) {
+        if let window = limits.fiveHour { fiveHour = window }
+        if let window = limits.sevenDay { sevenDay = window }
+        updatedAt = max(updatedAt ?? checkedAt, checkedAt)
+        serverCheckedAt = checkedAt
     }
 
     /// Aplica `incoming` sobre `current` quando for mais recente; `nil` se a janela não veio no payload.

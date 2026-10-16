@@ -1,22 +1,29 @@
 import Foundation
 
-/// Mantém o `UsageState` em dia observando o `state.json` gravado pelo bridge.
+/// Mantém o `UsageState` em dia com duas fontes: a consulta ao `/usage` a cada 5 min e o `state.json` do bridge.
 ///
 /// O bridge troca o arquivo com `mv` atômico, o que muda o inode; por isso a observação é feita
-/// no diretório, não no arquivo. Um timer de fallback relê o arquivo e atualiza o relógio da UI.
+/// no diretório, não no arquivo. Um timer de fallback relê o arquivo, dispara a consulta e atualiza o relógio da UI.
 @MainActor
 final class UsageStore: ObservableObject {
     @Published private(set) var state: UsageState
     /// Relógio da UI: janelas que passaram do reset e "atualizado há X min" dependem dele.
     @Published private(set) var now = Date()
+    @Published private(set) var isCheckingServer = false
+    /// Erro da última consulta ao servidor; `nil` depois de uma consulta que deu certo.
+    @Published private(set) var serverError: UsageReportError?
 
     let fileURL: URL
     private let defaults: UserDefaults
     private var watcher: DispatchSourceFileSystemObject?
     private var timer: Timer?
     private var pendingReload: DispatchWorkItem?
+    private var lastServerAttempt: Date?
 
     static let fallbackInterval: TimeInterval = 30
+    static let serverInterval: TimeInterval = 5 * 60
+    /// Intervalo mínimo entre consultas disparadas ao abrir o popover.
+    static let serverThrottle: TimeInterval = 60
     private static let cacheKey = "usageState"
 
     init(fileURL: URL = StateFile.defaultURL, defaults: UserDefaults = .standard) {
@@ -28,6 +35,7 @@ final class UsageStore: ObservableObject {
         reload()
         startWatching()
         startTimer()
+        checkServer(force: true)
     }
 
     func reload() {
@@ -35,6 +43,35 @@ final class UsageStore: ObservableObject {
         guard let contents = try? StateFile.load(from: fileURL) else { return }
         var next = state
         next.absorb(contents.snapshot, receivedAt: contents.modifiedAt)
+        commit(next)
+    }
+
+    /// Consulta o `/usage`. Sem `force`, só consulta se a última tentativa tiver mais de `serverThrottle`.
+    func checkServer(force: Bool = false) {
+        let startedAt = Date()
+        guard !isCheckingServer else { return }
+        if !force, let lastServerAttempt, startedAt.timeIntervalSince(lastServerAttempt) < Self.serverThrottle {
+            return
+        }
+        lastServerAttempt = startedAt
+        isCheckingServer = true
+        Task {
+            let result = await UsageReportClient.fetch()
+            isCheckingServer = false
+            now = Date()
+            switch result {
+            case .success(let limits):
+                serverError = nil
+                var next = state
+                next.applyServerReading(limits, checkedAt: startedAt)
+                commit(next)
+            case .failure(let error):
+                serverError = error
+            }
+        }
+    }
+
+    private func commit(_ next: UsageState) {
         guard next != state else { return }
         state = next
         if let data = try? JSONEncoder().encode(next) {
@@ -86,6 +123,9 @@ final class UsageStore: ObservableObject {
                 guard let self else { return }
                 self.startWatching()
                 self.reload()
+                if let last = self.lastServerAttempt, self.now.timeIntervalSince(last) >= Self.serverInterval {
+                    self.checkServer(force: true)
+                }
             }
         }
         RunLoop.main.add(timer, forMode: .common)
