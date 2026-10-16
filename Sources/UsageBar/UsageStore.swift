@@ -15,6 +15,7 @@ final class UsageStore: ObservableObject {
 
     let fileURL: URL
     private let defaults: UserDefaults
+    private let fetchReport: () async -> Result<RateLimits, UsageReportError>
     private var watcher: DispatchSourceFileSystemObject?
     private var timer: Timer?
     private var pendingReload: DispatchWorkItem?
@@ -26,9 +27,11 @@ final class UsageStore: ObservableObject {
     static let serverThrottle: TimeInterval = 60
     private static let cacheKey = "usageState"
 
-    init(fileURL: URL = StateFile.defaultURL, defaults: UserDefaults = .standard) {
+    init(fileURL: URL = StateFile.defaultURL, defaults: UserDefaults = .standard,
+         fetchReport: @escaping () async -> Result<RateLimits, UsageReportError> = UsageReportClient.fetch) {
         self.fileURL = fileURL
         self.defaults = defaults
+        self.fetchReport = fetchReport
         // O cache guarda o melhor valor já visto: o state.json atual pode ter vindo de uma sessão parada.
         state = defaults.data(forKey: Self.cacheKey)
             .flatMap { try? JSONDecoder().decode(UsageState.self, from: $0) } ?? UsageState()
@@ -56,7 +59,7 @@ final class UsageStore: ObservableObject {
         lastServerAttempt = startedAt
         isCheckingServer = true
         Task {
-            let result = await UsageReportClient.fetch()
+            let result = await fetchReport()
             isCheckingServer = false
             now = Date()
             switch result {
