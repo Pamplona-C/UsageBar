@@ -38,11 +38,9 @@ final class UsageReportTests: XCTestCase {
         let limits = try UsageReport.parse(try fixture())
 
         XCTAssertEqual(limits.fiveHour?.usedPercentage, 25)
-        XCTAssertEqual(try XCTUnwrap(limits.fiveHour?.resetsAt?.timeIntervalSince1970), 1_792_160_400.138122,
-                       accuracy: 0.001)
+        XCTAssertEqual(limits.fiveHour?.resetsAt, Date(timeIntervalSince1970: 1_792_160_400), "arredondado para segundos")
         XCTAssertEqual(limits.sevenDay?.usedPercentage, 56)
-        XCTAssertEqual(try XCTUnwrap(limits.sevenDay?.resetsAt?.timeIntervalSince1970), 1_792_274_400.138144,
-                       accuracy: 0.001)
+        XCTAssertEqual(limits.sevenDay?.resetsAt, Date(timeIntervalSince1970: 1_792_274_400))
     }
 
     /// Mesma janela que o bridge grava (`resets_at` 1792160400): o app não pode tratá-la como janela nova.
