@@ -126,10 +126,10 @@ private struct LimitRow: Decodable {
         guard let container = try? decoder.container(keyedBy: CodingKeys.self) else { return }
         kind = container.lenient(String.self, forKey: .kind)
         percent = container.lenient(Double.self, forKey: .percent)
-        // ISO 8601 com microssegundos, ex.: "2026-10-16T14:20:00.138122+00:00". Arredonda para segundos, como
-        // na statusline, para o cache (epoch em segundos) devolver exatamente o mesmo valor.
+        // ISO 8601 com microssegundos que variam a cada consulta (14:20:00.138122, 14:20:00.725105). Trunca para
+        // segundos: fica igual ao `resets_at` da statusline e o cache (epoch em segundos) devolve o mesmo valor.
         resetsAt = container.lenient(String.self, forKey: .resetsAt)
             .flatMap { try? Date($0, strategy: .iso8601) }
-            .map { Date(timeIntervalSince1970: $0.timeIntervalSince1970.rounded()) }
+            .map { Date(timeIntervalSince1970: $0.timeIntervalSince1970.rounded(.down)) }
     }
 }

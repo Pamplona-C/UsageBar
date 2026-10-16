@@ -52,6 +52,15 @@ final class UsageReportTests: XCTestCase {
         XCTAssertEqual(UsageState.compare(fromBridge, to: fromServer), .older)
     }
 
+    /// Visto ao vivo: a fração muda a cada consulta e arredondar levava 14:20:00.725 para 14:20:01.
+    func testResetFractionIsTruncated() throws {
+        let data = try fixture(changingReport: limits([
+            ["kind": "session", "percent": 32, "resets_at": "2026-10-16T14:20:00.725105+00:00"],
+        ]))
+
+        XCTAssertEqual(try UsageReport.parse(data).fiveHour?.resetsAt, Date(timeIntervalSince1970: 1_792_160_400))
+    }
+
     func testRowsAreClassifiedByKindNotOrder() throws {
         let data = try fixture(changingReport: limits([
             ["kind": "weekly_scoped", "percent": 90, "resets_at": "2026-10-17T22:00:00+00:00"],
