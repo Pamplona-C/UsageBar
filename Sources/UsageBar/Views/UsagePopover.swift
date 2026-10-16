@@ -16,6 +16,9 @@ struct UsagePopover: View {
             if state.hasData {
                 WindowRow(title: "Janela de 5h", window: state.fiveHour, now: now)
                 WindowRow(title: "Semanal", window: state.sevenDay, now: now)
+            } else if store.isCheckingServer {
+                Label("Consultando o servidor…", systemImage: "hourglass")
+                    .foregroundStyle(.secondary)
             } else {
                 VStack(alignment: .leading, spacing: 6) {
                     Label("Sem dados ainda — use o Claude Code uma vez", systemImage: "hourglass")
@@ -29,15 +32,37 @@ struct UsagePopover: View {
 
             Divider()
 
-            if let updatedAt = state.updatedAt {
-                if state.isStale(at: now) {
-                    Label("Dados antigos (> 1h) · \(Format.updated(updatedAt, now: now).lowercased())",
-                          systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                } else {
-                    Text(Format.updated(updatedAt, now: now))
-                        .foregroundStyle(.secondary)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                if let updatedAt = state.updatedAt {
+                    if state.isStale(at: now) {
+                        Label("Dados antigos (> 1h) · \(Format.updated(updatedAt, now: now).lowercased())",
+                              systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                    } else {
+                        Text(Format.updated(updatedAt, now: now))
+                            .foregroundStyle(.secondary)
+                    }
                 }
+                Spacer(minLength: 0)
+                if store.isCheckingServer {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Button { store.checkServer(force: true) } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .help("Atualizar: consultar o uso no servidor")
+                    .accessibilityLabel("Atualizar")
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+
+            if let error = store.serverError {
+                Label(error.message, systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             HStack {
@@ -52,6 +77,7 @@ struct UsagePopover: View {
         .font(.callout)
         .padding(16)
         .frame(width: 280)
+        .onAppear { store.checkServer() }
     }
 }
 

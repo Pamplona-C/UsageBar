@@ -36,13 +36,35 @@ struct SettingsView: View {
                 }
             }
 
+            Section("Consulta ao servidor") {
+                LabeledContent("Última consulta") {
+                    Text(store.state.serverCheckedAt.map { Format.ago($0, now: store.now) } ?? "Nenhuma ainda")
+                        .foregroundStyle(.secondary)
+                }
+                Text("A cada 5 min o app roda o /usage do Claude Code, que traz do servidor o uso real da conta, incluindo o da web. A consulta não gasta limite.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if let error = store.serverError {
+                    Text(error.message)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .textSelection(.enabled)
+                }
+                HStack {
+                    if store.isCheckingServer { ProgressView().controlSize(.small) }
+                    Spacer()
+                    Button("Atualizar agora") { store.checkServer(force: true) }
+                        .disabled(store.isCheckingServer)
+                }
+            }
+
             Section("Statusline do Claude Code") {
                 LabeledContent("Bridge") {
                     Label(bridgeInstalled ? "Instalado" : "Não instalado",
                           systemImage: bridgeInstalled ? "checkmark.circle.fill" : "xmark.circle")
                         .foregroundStyle(bridgeInstalled ? .green : .secondary)
                 }
-                Text("O bridge grava os dados de uso que o Claude Code envia à statusline e repassa tudo para a sua statusline atual, que continua aparecendo.")
+                Text("O bridge grava os dados de uso que o Claude Code envia à statusline, o que atualiza a barra a cada resposta entre uma consulta e outra. Ele repassa tudo para a sua statusline atual, que continua aparecendo.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 HStack {

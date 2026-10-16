@@ -8,17 +8,22 @@ enum Format {
     }
 
     static func updated(_ date: Date, now: Date) -> String {
+        "Atualizado \(ago(date, now: now))"
+    }
+
+    /// "agora", "há 5 min", "há 2 h" ou "há 3 dias".
+    static func ago(_ date: Date, now: Date) -> String {
         let seconds = max(0, now.timeIntervalSince(date))
         switch seconds {
         case ..<60:
-            return "Atualizado agora"
+            return "agora"
         case ..<3600:
-            return "Atualizado há \(Int(seconds / 60)) min"
+            return "há \(Int(seconds / 60)) min"
         case ..<86_400:
-            return "Atualizado há \(Int(seconds / 3600)) h"
+            return "há \(Int(seconds / 3600)) h"
         default:
             let days = Int(seconds / 86_400)
-            return "Atualizado há \(days) \(days == 1 ? "dia" : "dias")"
+            return "há \(days) \(days == 1 ? "dia" : "dias")"
         }
     }
 

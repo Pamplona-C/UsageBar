@@ -26,6 +26,12 @@ final class FormattingTests: XCTestCase {
         XCTAssertEqual(Format.updated(now + 10, now: now), "Atualizado agora", "relógio adiantado não gera tempo negativo")
     }
 
+    func testAgo() {
+        XCTAssertEqual(Format.ago(now - 30, now: now), "agora")
+        XCTAssertEqual(Format.ago(now - 5 * 60, now: now), "há 5 min")
+        XCTAssertEqual(Format.ago(now - 2 * 86_400, now: now), "há 2 dias")
+    }
+
     func testResetUsesFixtureTimes() {
         XCTAssertEqual(Format.reset(Date(timeIntervalSince1970: 1_792_086_600), now: now, calendar: calendar),
                        "hoje às 14:50")
