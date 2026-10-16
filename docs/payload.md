@@ -1,5 +1,8 @@
 # Payload da statusline do Claude Code
 
+Uma das duas fontes do app. A outra, a consulta ao servidor, está em [`usage-report.md`](usage-report.md); quando as
+duas existem, a leitura do servidor é a referência.
+
 Mapeamento baseado em capturas reais (Fase 0) e conferido com a
 [documentação oficial da statusline](https://code.claude.com/docs/en/statusline).
 

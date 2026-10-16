@@ -3,29 +3,37 @@
 App de barra de menu do macOS que mostra o consumo dos limites do Claude Code: o percentual da janela de 5 horas
 no label, com uma bolinha na cor do limite semanal, e os detalhes de cada janela ao clicar.
 
-<img src="docs/popover.png" width="280" alt="Popover do UsageBar com a janela de 5h em 19% e a semanal em 50%">
+<img src="docs/popover.png" width="280" alt="Popover do UsageBar com a janela de 5h em 25% e a semanal em 56%">
 
 Cores: verde abaixo de 60%, amarelo de 60% a 85%, vermelho acima de 85%.
 
 ## Como funciona
 
-O Claude Code envia um JSON com os dados de uso para o comando da statusline. O UsageBar instala um bridge
-nesse caminho:
+O app junta duas fontes:
 
-```
-Claude Code ──stdin JSON──> ~/.claude/usagebar-bridge.sh ──grava──> ~/.claude/usagebar/state.json
-                                     │                                        │
-                                     └─ repassa ao statusline original         └─ o app observa e atualiza
-```
+1. **Servidor, a cada 5 min:** o app roda o comando `/usage` do Claude Code, que traz o uso real da conta, incluindo
+   o que você usou no claude.ai. A consulta não chama o modelo e não gasta limite. Também consulta ao abrir o popover
+   e no botão de atualizar. Detalhes em [`docs/usage-report.md`](docs/usage-report.md).
+2. **Statusline, a cada resposta:** o Claude Code envia um JSON com os dados de uso para o comando da statusline. O
+   UsageBar instala um bridge nesse caminho, e a barra muda na hora, sem esperar a próxima consulta:
 
-- A sua statusline atual continua aparecendo: o bridge repassa os mesmos dados para ela.
-- O app não lê o Keychain, não usa token e não acessa a rede. Só lê `~/.claude/usagebar/state.json`.
-- Os dados de uso só existem para assinantes Pro e Max, e só depois da primeira resposta em cada sessão.
-  Detalhes do formato em [`docs/payload.md`](docs/payload.md).
+   ```
+   Claude Code ──stdin JSON──> ~/.claude/usagebar-bridge.sh ──grava──> ~/.claude/usagebar/state.json
+                                        │                                        │
+                                        └─ repassa ao statusline original         └─ o app observa e atualiza
+   ```
+
+   A sua statusline atual continua aparecendo: o bridge repassa os mesmos dados para ela. Formato em
+   [`docs/payload.md`](docs/payload.md).
+
+- O app não lê o Keychain, não usa token e não chama a API. Quem fala com o servidor é o próprio Claude Code, com o
+  login dele.
+- Os dados de uso só existem para assinantes Pro e Max.
 
 ## Requisitos
 
 - macOS 14 (Sonoma) ou superior.
+- Claude Code instalado e com login de uma conta Pro ou Max.
 - Xcode ou Command Line Tools com Swift 5.9 ou superior.
 
 ## Instalação
@@ -76,9 +84,9 @@ Os backups `~/.claude/settings.json.bak-*` ficam; apague quando não precisar ma
 ## Desenvolvimento
 
 ```bash
-swift test   # parser, regra de combinação entre sessões, formatação e scripts do bridge
+swift test   # parsers, regras de combinação, consulta ao servidor, formatação e scripts do bridge
 swift run    # abre o app sem empacotar (também fica fora do Dock)
 ```
 
 Os testes dos scripts rodam contra um `~/.claude` falso (variável `USAGEBAR_CLAUDE_DIR`) e nunca tocam no seu
-`settings.json`.
+`settings.json`. Os testes da consulta usam um `claude` falso e nunca rodam o Claude Code de verdade.

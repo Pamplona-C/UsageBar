@@ -11,7 +11,16 @@ App nativo para macOS que fica **apenas na barra de menu** (sem ícone no Dock, 
 - Swift Package Manager (executável), **sem .xcodeproj**. Um script `build-app.sh` compila em release e empacota um `.app` com `Info.plist` contendo `LSUIElement = true`, instalando em `~/Applications`.
 - Sem dependências de terceiros, a menos que eu aprove.
 
-## Fonte de dados: statusline do Claude Code (única fonte)
+## Fontes de dados
+Duas fontes. A consulta ao servidor é a referência; a statusline atualiza a barra a cada resposta entre uma consulta e outra.
+
+### Consulta ao servidor: `/usage` do Claude Code (Fase 5, aprovada em 16/10/2026)
+- A cada 5 min, ao abrir o popover e no botão de atualizar, o app roda `claude -p --safe-mode --no-session-persistence --output-format stream-json --verbose "/usage"` e lê o `usage_report` documentado no Agent SDK. Traz o uso real da conta, incluindo o da web, e não gasta limite.
+- O app não lê token nem Keychain e não chama a API: quem fala com o servidor é o próprio Claude Code, com o login dele.
+- O `usage_report` é marcado como experimental na documentação: parser tolerante e, se falhar, o app mostra o erro e segue com o bridge.
+- Mapeamento e regra de combinação em `docs/usage-report.md`.
+
+### Statusline do Claude Code
 O Claude Code executa o comando configurado em `statusLine.command` (em `~/.claude/settings.json`), envia um JSON via **stdin** e exibe o **stdout** do comando como statusline. Esse JSON inclui informações de rate limit.
 
 Fluxo:
@@ -61,6 +70,11 @@ Claude Code ──stdin JSON──> ~/.claude/usagebar-bridge.sh ──grava─�
 - Opção "Abrir ao iniciar sessão" via `SMAppService.mainApp`.
 - README com instalação, como liberar no Gatekeeper e como desinstalar.
 
+### Fase 5 — Consulta ao servidor
+- `UsageReportClient` roda o `/usage` do Claude Code e lê o `usage_report`; a leitura substitui os valores do bridge.
+- Botão de atualizar no popover e seção "Consulta ao servidor" nas Configurações.
+**Critério de aceite:** usar o claude.ai na web → clicar em atualizar → o percentual sobe sem usar o Claude Code.
+
 ## Fora de escopo (por enquanto)
 Histórico e gráficos, custo em R$/US$, múltiplas contas, notificações, Codex e outros CLIs.
 
@@ -78,8 +92,10 @@ UsageBar/
 ├── Sources/UsageBar/        # App, UsageStore, Views, Models
 ├── Tests/UsageBarTests/
 ├── fixtures/statusline-sample.json
+├── fixtures/usage-report-sample.jsonl
 ├── scripts/                 # bridge, install, uninstall
 ├── docs/payload.md
+├── docs/usage-report.md
 ├── build-app.sh
 └── README.md
 ```
