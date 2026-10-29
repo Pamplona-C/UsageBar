@@ -128,8 +128,9 @@ private struct LimitRow: Decodable {
         percent = container.lenient(Double.self, forKey: .percent)
         // ISO 8601 com microssegundos que variam a cada consulta (14:20:00.138122, 14:20:00.725105). Trunca para
         // segundos: fica igual ao `resets_at` da statusline e o cache (epoch em segundos) devolve o mesmo valor.
+        // A fração sai do texto antes do parse: no macOS 14 e 15, `.iso8601` rejeita a data se ela tiver fração.
         resetsAt = container.lenient(String.self, forKey: .resetsAt)
+            .map { $0.replacingOccurrences(of: #"\.\d+"#, with: "", options: .regularExpression) }
             .flatMap { try? Date($0, strategy: .iso8601) }
-            .map { Date(timeIntervalSince1970: $0.timeIntervalSince1970.rounded(.down)) }
     }
 }
