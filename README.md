@@ -4,6 +4,12 @@ App de barra de menu do macOS que mostra o consumo dos limites do Claude Code: o
 no label, com uma bolinha na cor do limite semanal. Ao clicar, dois anéis mostram quanto resta em cada janela e
 quando ela reinicia, e um card mostra os tokens gastos por hora (janela de 5h) ou por dia (segunda a domingo).
 
+Na barra de menu fica o percentual usado da janela de 5h; a bolinha tem a cor do limite semanal:
+
+<img src="docs/menubar.png" width="420" alt="Barra de menu do macOS nos temas claro e escuro, com o UsageBar mostrando uma bolinha verde e 25%">
+
+Ao clicar, abre o popover:
+
 <img src="docs/popover.png" width="300" alt="Popover do UsageBar: anéis com 75% livre na janela de 5h e 44% na semana, e card de tokens com o gráfico por hora">
 
 Cores: verde abaixo de 60%, amarelo de 60% a 85%, vermelho acima de 85%.
