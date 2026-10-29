@@ -1,7 +1,8 @@
 # UsageBar
 
 App de barra de menu do macOS que mostra o consumo dos limites do Claude Code: o percentual da janela de 5 horas
-no label, com uma bolinha na cor do limite semanal, e os detalhes de cada janela ao clicar.
+no label, com uma bolinha na cor do limite semanal. Ao clicar, dois anéis mostram quanto resta em cada janela e
+quando ela reinicia, e um card mostra os tokens gastos por hora (janela de 5h) ou por dia (segunda a domingo).
 
 <img src="docs/popover.png" width="280" alt="Popover do UsageBar com a janela de 5h em 25% e a semanal em 56%">
 
@@ -9,7 +10,7 @@ Cores: verde abaixo de 60%, amarelo de 60% a 85%, vermelho acima de 85%.
 
 ## Como funciona
 
-O app junta duas fontes:
+O app junta três fontes:
 
 1. **Servidor, a cada 5 min:** o app roda o comando `/usage` do Claude Code, que traz o uso real da conta, incluindo
    o que você usou no claude.ai. A consulta não chama o modelo e não gasta limite. Também consulta ao abrir o popover
@@ -25,6 +26,11 @@ O app junta duas fontes:
 
    A sua statusline atual continua aparecendo: o bridge repassa os mesmos dados para ela. Formato em
    [`docs/payload.md`](docs/payload.md).
+
+3. **Históricos do Claude Code, para os tokens:** o app soma os tokens que o Claude Code registra em
+   `~/.claude/projects/`, lendo só o que foi acrescentado desde a última vez. Cobre só o Claude Code deste Mac: o uso
+   no claude.ai e em outros computadores aparece nos anéis, mas não nos tokens. Detalhes em
+   [`docs/transcripts.md`](docs/transcripts.md).
 
 - O app não lê o Keychain, não usa token e não chama a API. Quem fala com o servidor é o próprio Claude Code, com o
   login dele.

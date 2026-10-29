@@ -75,8 +75,16 @@ Claude Code ──stdin JSON──> ~/.claude/usagebar-bridge.sh ──grava─�
 - Botão de atualizar no popover e seção "Consulta ao servidor" nas Configurações.
 **Critério de aceite:** usar o claude.ai na web → clicar em atualizar → o percentual sobe sem usar o Claude Code.
 
+### Fase 6 — Popover com anéis e tokens (aprovada em 29/10/2026)
+- Anéis com o percentual **livre** das janelas de 5h e semanal, no lugar das barras.
+- Card de tokens (total e escritos) com gráfico de barras: modo 5h (uma barra por hora da janela) e modo Semana
+  (segunda a domingo). Os tokens vêm dos históricos locais do Claude Code em `~/.claude/projects/` e cobrem só
+  este Mac; nunca alteram o percentual. Regras em `docs/transcripts.md`.
+- Design em `docs/superpowers/specs/2026-10-29-popover-aneis-tokens-design.md`.
+**Critério de aceite:** os números do card batem com uma soma independente dos históricos.
+
 ## Fora de escopo (por enquanto)
-Histórico e gráficos, custo em R$/US$, múltiplas contas, notificações, Codex e outros CLIs.
+Histórico do percentual e projeções, custo em R$/US$, múltiplas contas, notificações, Codex e outros CLIs.
 
 ## Como trabalhar comigo
 - Antes de cada fase, apresente um plano curto (arquivos que vai criar ou alterar) e espere meu ok.
@@ -89,13 +97,15 @@ Histórico e gráficos, custo em R$/US$, múltiplas contas, notificações, Code
 UsageBar/
 ├── CLAUDE.md
 ├── Package.swift
-├── Sources/UsageBar/        # App, UsageStore, Views, Models
+├── Sources/UsageBar/        # App, UsageStore, Views, Models, Tokens
 ├── Tests/UsageBarTests/
 ├── fixtures/statusline-sample.json
 ├── fixtures/usage-report-sample.jsonl
+├── fixtures/transcript-sample.jsonl
 ├── scripts/                 # bridge, install, uninstall
 ├── docs/payload.md
 ├── docs/usage-report.md
+├── docs/transcripts.md
 ├── build-app.sh
 └── README.md
 ```
