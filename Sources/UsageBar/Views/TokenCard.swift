@@ -53,7 +53,8 @@ struct TokenCard: View {
 
     @ViewBuilder
     private func content(_ data: TokenChartData) -> some View {
-        let selected = data.bars.first { label($0) == selectedLabel }
+        // Barra futura não tem dado: o mouse sobre ela não troca os números.
+        let selected = data.bars.first { label($0) == selectedLabel && !$0.isFuture }
         let shown = selected?.count ?? data.total
 
         HStack(alignment: .firstTextBaseline) {
@@ -106,14 +107,30 @@ struct TokenCard: View {
         }
         .chartYAxis(.hidden)
         .chartXAxis(range == .week ? .automatic : .hidden)
-        .chartXSelection(value: $selectedLabel)
+        // Hover explícito: o `chartXSelection` do macOS pode exigir clique e arraste.
+        .chartOverlay { proxy in
+            GeometryReader { geometry in
+                Rectangle()
+                    .fill(.clear)
+                    .contentShape(Rectangle())
+                    .onContinuousHover { phase in
+                        switch phase {
+                        case .active(let location):
+                            guard let plot = proxy.plotFrame else { return }
+                            selectedLabel = proxy.value(atX: location.x - geometry[plot].origin.x, as: String.self)
+                        case .ended:
+                            selectedLabel = nil
+                        }
+                    }
+            }
+        }
         .frame(height: 72)
     }
 
     private func color(_ bar: TokenBar) -> AnyShapeStyle {
         if bar.isFuture { return AnyShapeStyle(.quaternary) }
         let green = UsageLevel.normal.color
-        if let selectedLabel, selectedLabel == label(bar) { return AnyShapeStyle(green) }
+        if selectedLabel == label(bar) { return AnyShapeStyle(green) }
         return AnyShapeStyle(bar.isCurrent ? green : green.opacity(0.6))
     }
 
