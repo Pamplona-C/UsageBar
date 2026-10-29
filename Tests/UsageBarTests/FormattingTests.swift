@@ -46,4 +46,29 @@ final class FormattingTests: XCTestCase {
         let nextWeek = Date(timeIntervalSince1970: 1_792_879_200) // 24/10/2026 19:00 (-03)
         XCTAssertEqual(Format.reset(nextWeek, now: now, calendar: calendar), "24/10 às 19:00")
     }
+
+    func testTokens() {
+        XCTAssertEqual(Format.tokens(0), "0")
+        XCTAssertEqual(Format.tokens(950), "950")
+        XCTAssertEqual(Format.tokens(1_234), "1,2 mil")
+        XCTAssertEqual(Format.tokens(222_566), "223 mil")
+        XCTAssertEqual(Format.tokens(1_600_000), "1,6M")
+        XCTAssertEqual(Format.tokens(43_666_000), "43,7M")
+        XCTAssertEqual(Format.tokens(312_000_000), "312M")
+        XCTAssertEqual(Format.tokens(1_250_000_000), "1,3 bi")
+        XCTAssertEqual(Format.tokens(999_960), "1,0M", "arredondar não pode dar \"1000 mil\"")
+    }
+
+    func testResetShort() {
+        XCTAssertEqual(Format.resetShort(now + 2 * 3600 + 40 * 60, now: now, calendar: calendar), "reinicia em 2h40")
+        XCTAssertEqual(Format.resetShort(now + 2 * 3600, now: now, calendar: calendar), "reinicia em 2h")
+        XCTAssertEqual(Format.resetShort(now + 15 * 60, now: now, calendar: calendar), "reinicia em 15 min")
+        XCTAssertEqual(Format.resetShort(now + 20, now: now, calendar: calendar), "reinicia em 1 min")
+        // Sexta 16/10 19:00 e sábado 17/10 19:00 (-03).
+        XCTAssertEqual(Format.resetShort(Date(timeIntervalSince1970: 1_792_188_000), now: now, calendar: calendar),
+                       "reinicia amanhã 19:00")
+        XCTAssertEqual(Format.resetShort(Date(timeIntervalSince1970: 1_792_274_400), now: now, calendar: calendar),
+                       "reinicia sábado 19:00")
+        XCTAssertEqual(Format.resetShort(now - 60, now: now, calendar: calendar), "janela reiniciada")
+    }
 }

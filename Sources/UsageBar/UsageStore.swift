@@ -14,6 +14,8 @@ final class UsageStore: ObservableObject {
     @Published private(set) var serverError: UsageReportError?
 
     let fileURL: URL
+    /// Tokens dos históricos locais; atualizados junto com o `state.json`, que muda a cada resposta.
+    let tokens: TokenStore
     private let defaults: UserDefaults
     private let fetchReport: () async -> Result<RateLimits, UsageReportError>
     private var watcher: DispatchSourceFileSystemObject?
@@ -28,8 +30,10 @@ final class UsageStore: ObservableObject {
     private static let cacheKey = "usageState"
 
     init(fileURL: URL = StateFile.defaultURL, defaults: UserDefaults = .standard,
-         fetchReport: @escaping () async -> Result<RateLimits, UsageReportError> = UsageReportClient.fetch) {
+         fetchReport: @escaping () async -> Result<RateLimits, UsageReportError> = UsageReportClient.fetch,
+         tokens: TokenStore? = nil) {
         self.fileURL = fileURL
+        self.tokens = tokens ?? TokenStore()
         self.defaults = defaults
         self.fetchReport = fetchReport
         // O cache guarda o melhor valor já visto: o state.json atual pode ter vindo de uma sessão parada.
@@ -43,6 +47,7 @@ final class UsageStore: ObservableObject {
 
     func reload() {
         now = Date()
+        defer { tokens.refresh(window: state.fiveHour) }
         guard let contents = try? StateFile.load(from: fileURL) else { return }
         var next = state
         next.absorb(contents.snapshot, receivedAt: contents.modifiedAt)
