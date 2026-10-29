@@ -1,12 +1,15 @@
 #!/bin/bash
 # Compila em release, empacota UsageBar.app (LSUIElement, assinado ad-hoc) e instala em ~/Applications.
-# Uso: ./build-app.sh [--no-open]
+# Uso: ./build-app.sh [--no-open | --package-only]
+#   --no-open       instala sem abrir o app
+#   --package-only  só gera .build/app/UsageBar.app, sem instalar (usado no GitHub Actions)
+# A versão vem de VERSION (ex.: VERSION=0.2.0 ./build-app.sh); o padrão é 0.1.0.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 name="UsageBar"
 bundle_id="com.gustavopamplona.UsageBar"
-version="0.1.0"
+version="${VERSION:-0.1.0}"
 install_dir="$HOME/Applications"
 app=".build/app/$name.app"
 
@@ -58,6 +61,11 @@ EOF
 
 codesign --force --sign - "$app"
 codesign --verify --strict "$app"
+
+if [ "${1:-}" = "--package-only" ]; then
+  echo "Empacotado em $app"
+  exit 0
+fi
 
 # Fecha a versão em execução antes de trocar o .app.
 pkill -x "$name" 2>/dev/null || true

@@ -38,6 +38,21 @@ O app junta duas fontes:
 
 ## Instalação
 
+### Baixando pronto
+
+1. Baixe o `UsageBar.zip` da versão mais recente em [Releases](https://github.com/Pamplona-C/UsageBar/releases).
+2. Descompacte e mova o `UsageBar.app` para `~/Applications`.
+3. Libere o app no Gatekeeper (veja a seção [Gatekeeper](#gatekeeper)):
+
+   ```bash
+   xattr -dr com.apple.quarantine ~/Applications/UsageBar.app
+   ```
+
+Para publicar uma versão nova: `git tag v0.2.0 && git push origin v0.2.0`. O GitHub Actions roda os testes,
+compila e anexa o `.zip` na release.
+
+### Compilando na sua máquina
+
 ```bash
 ./build-app.sh
 ```
