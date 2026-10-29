@@ -22,7 +22,7 @@ final class UsageStoreTests: XCTestCase {
 
     private func makeStore(_ result: Result<RateLimits, UsageReportError>) -> UsageStore {
         UsageStore(fileURL: directory.appendingPathComponent("state.json"), defaults: defaults,
-                   fetchReport: { result })
+                   fetchReport: { result }, tokens: TokenStore(scan: { _ in TokenBuckets() }))
     }
 
     private func waitForServerCheck(_ store: UsageStore) async throws {
@@ -59,7 +59,8 @@ final class UsageStoreTests: XCTestCase {
     func testCheckWithoutForceIsThrottled() async throws {
         var calls = 0
         let store = UsageStore(fileURL: directory.appendingPathComponent("state.json"), defaults: defaults,
-                               fetchReport: { calls += 1; return .failure(.timedOut) })
+                               fetchReport: { calls += 1; return .failure(.timedOut) },
+                               tokens: TokenStore(scan: { _ in TokenBuckets() }))
         try await waitForServerCheck(store)
 
         store.checkServer()
