@@ -12,6 +12,10 @@ enum UsageReportError: Error, Equatable {
     case noLimits
     /// Os limites vieram, mas sem as linhas `session` e `weekly_all`.
     case noKnownLimits
+    /// Sem relatório, e o `claude auth status` diz que o Claude Code não está logado.
+    case notLoggedIn
+    /// Sem relatório, e o Claude Code está logado com outro método (o valor de `authMethod`), não com o claude.ai.
+    case notClaudeAiLogin(String)
 
     var message: String {
         switch self {
@@ -29,7 +33,27 @@ enum UsageReportError: Error, Equatable {
             return "O Claude Code não conseguiu ler os limites do plano."
         case .noKnownLimits:
             return "O relatório de uso veio sem os limites de 5h e semanal."
+        case .notLoggedIn:
+            return "O Claude Code não está logado."
+        case .notClaudeAiLogin(let method):
+            return "O Claude Code está logado com \(method), e o uso do plano só aparece com login de uma conta do claude.ai."
         }
+    }
+
+    /// Erros que um novo login no Claude Code resolve.
+    var offersLogin: Bool {
+        switch self {
+        case .notLoggedIn, .notClaudeAiLogin: return true
+        default: return false
+        }
+    }
+
+    /// O `/usage` terminou sem `usage_report`: o `claude auth status` diz se o motivo é o login.
+    static func diagnosingMissingReport(_ status: AuthStatus?) -> UsageReportError {
+        guard let status else { return .noUsageReport }
+        if !status.loggedIn { return .notLoggedIn }
+        if let method = status.authMethod, method != "claude.ai" { return .notClaudeAiLogin(method) }
+        return .noUsageReport
     }
 }
 
