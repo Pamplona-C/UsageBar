@@ -183,6 +183,47 @@ final class UsageReportTests: XCTestCase {
                               "--output-format", "stream-json", "--verbose", "/usage"])
     }
 
+    /// `claude` falso: `auth ...` roda `body`; o `/usage` responde só com texto, como acontece sem login.
+    private func claudeWithoutReport(auth body: String) throws -> URL {
+        let argsFile = directory.appendingPathComponent("auth-args")
+        return try fakeClaude("""
+        if [ "$1" = auth ]; then
+          printf '%s\\n' "$@" > '\(argsFile.path)'
+          \(body)
+          exit 0
+        fi
+        echo '{"type":"result","subtype":"success","is_error":false,"result":"Total cost: $0.0000"}'
+        """)
+    }
+
+    func testMissingReportWhileLoggedOutAsksForLogin() throws {
+        let fixture = AuthStatusTests.fixtureURL("auth-status-logged-out.json").path
+        let claude = try claudeWithoutReport(auth: "cat '\(fixture)'")
+
+        XCTAssertEqual(UsageReportClient.run(claude), .failure(.notLoggedIn))
+        let args = try String(contentsOf: directory.appendingPathComponent("auth-args"), encoding: .utf8)
+        XCTAssertEqual(args.split(separator: "\n").map(String.init), ["auth", "status", "--json"])
+    }
+
+    func testMissingReportWithOtherLoginMethodNamesIt() throws {
+        let claude = try claudeWithoutReport(auth: #"echo '{"loggedIn":true,"authMethod":"console"}'"#)
+
+        XCTAssertEqual(UsageReportClient.run(claude), .failure(.notClaudeAiLogin("console")))
+    }
+
+    func testMissingReportWithClaudeAiLoginKeepsGenericError() throws {
+        let fixture = AuthStatusTests.fixtureURL("auth-status-logged-in.json").path
+        let claude = try claudeWithoutReport(auth: "cat '\(fixture)'")
+
+        XCTAssertEqual(UsageReportClient.run(claude), .failure(.noUsageReport))
+    }
+
+    func testMissingReportWhenAuthStatusFailsKeepsGenericError() throws {
+        let claude = try claudeWithoutReport(auth: "echo 'unknown command' >&2; exit 1")
+
+        XCTAssertEqual(UsageReportClient.run(claude), .failure(.noUsageReport))
+    }
+
     func testRunReportsStderrWhenCommandFails() throws {
         let claude = try fakeClaude("echo 'Invalid API key · Please run /login' >&2; exit 1")
 

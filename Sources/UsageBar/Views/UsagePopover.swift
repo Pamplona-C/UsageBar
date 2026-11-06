@@ -21,6 +21,12 @@ struct UsagePopover: View {
             } else if store.isCheckingServer {
                 Label("Consultando o servidor…", systemImage: "hourglass")
                     .foregroundStyle(.secondary)
+            } else if store.serverError?.offersLogin == true {
+                // O motivo e o botão de login aparecem embaixo, junto com o erro da consulta.
+                Label("Sem dados: o Claude Code precisa de login para consultar o uso.",
+                      systemImage: "person.crop.circle.badge.exclamationmark")
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             } else {
                 VStack(alignment: .leading, spacing: 6) {
                     Label("Sem dados ainda — use o Claude Code uma vez", systemImage: "hourglass")
@@ -65,6 +71,9 @@ struct UsagePopover: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                if error.offersLogin {
+                    LoginButton()
+                }
             }
 
             HStack {

@@ -80,11 +80,22 @@ vem só o texto. `rate_limits` é `null` quando o Claude Code não consegue ler 
 | Situação | Erro no app |
 |---|---|
 | `claude` não encontrado | Claude Code não encontrado. |
-| Saída sem `usage_report` | O Claude Code não devolveu o relatório de uso. |
+| Saída sem `usage_report`, e `claude auth status --json` com `loggedIn: false` | O Claude Code não está logado. + botão **Fazer login no Claude Code** |
+| Saída sem `usage_report`, logado com outro `authMethod` (não `claude.ai`) | O Claude Code está logado com …, e o uso do plano só aparece com login de uma conta do claude.ai. + botão de login |
+| Saída sem `usage_report`, logado com `claude.ai` ou `auth status` ilegível | O Claude Code não devolveu o relatório de uso. |
 | `rate_limits` nulo | O Claude Code não conseguiu ler os limites do plano. |
 | Sem linhas `session` nem `weekly_all` | O relatório de uso veio sem os limites de 5h e semanal. |
 | `result` com `is_error`, ou código de saída diferente de 0 | o texto do erro, ou a última linha do stderr |
 | Mais de 30 s | O Claude Code demorou demais para responder. |
+
+Sem login, o `/usage` termina com código 0, `is_error: false` e só o texto de custo local ("Total cost: $0.0000 …"),
+sem `usage_report`. Por isso, quando o relatório não vem, o app roda `claude auth status --json` (comando documentado)
+e usa só `loggedIn` e `authMethod` para escolher a mensagem. Fixtures: `fixtures/auth-status-logged-in.json` e
+`fixtures/auth-status-logged-out.json`, anonimizadas.
+
+O botão de login abre o terminal padrão com um script `.command` que roda `claude auth login`. O Claude Code abre o
+navegador, faz o login e guarda a credencial; o app não lê nem guarda nada disso. Depois do login, a próxima consulta
+(ao abrir o popover ou no botão de atualizar) já traz o relatório.
 
 ## Quando consulta
 

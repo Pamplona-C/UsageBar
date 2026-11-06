@@ -11,6 +11,8 @@ enum UsageReportClient {
         "-p", "--safe-mode", "--no-session-persistence",
         "--output-format", "stream-json", "--verbose", "/usage",
     ]
+    /// Diz se o Claude Code está logado e com qual método; usado quando o `/usage` vem sem relatório.
+    static let authStatusArguments = ["auth", "status", "--json"]
     static let timeout: TimeInterval = 30
 
     /// Onde os instaladores colocam o `claude`. Um app aberto pelo Finder não herda o PATH do terminal.
@@ -60,14 +62,25 @@ enum UsageReportClient {
             do {
                 return .success(try UsageReport.parse(stdout))
             } catch let error as UsageReportError {
-                if status != 0, case .noUsageReport = error {
-                    return .failure(.failed(failureMessage(status: status, stderr: stderr)))
+                if case .noUsageReport = error {
+                    if status != 0 {
+                        return .failure(.failed(failureMessage(status: status, stderr: stderr)))
+                    }
+                    // Sem login, o `/usage` termina sem erro e só com o texto de custo local.
+                    return .failure(.diagnosingMissingReport(authStatus(executable, timeout: timeout)))
                 }
                 return .failure(error)
             } catch {
                 return .failure(.noUsageReport)
             }
         }
+    }
+
+    private static func authStatus(_ executable: URL, timeout: TimeInterval) -> AuthStatus? {
+        guard case .exited(0, let stdout, _) = execute(executable, authStatusArguments, timeout: timeout) else {
+            return nil
+        }
+        return AuthStatus.parse(stdout)
     }
 
     /// Última linha do stderr, que costuma ser a mensagem de erro, ou o código de saída.
