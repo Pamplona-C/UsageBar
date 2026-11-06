@@ -49,6 +49,9 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.red)
                         .textSelection(.enabled)
+                    if error.offersLogin {
+                        LoginButton()
+                    }
                 }
                 HStack {
                     if store.isCheckingServer { ProgressView().controlSize(.small) }
