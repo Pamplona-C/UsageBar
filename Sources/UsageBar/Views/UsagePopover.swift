@@ -1,18 +1,14 @@
 import SwiftUI
 
 /// Conteúdo que abre ao clicar no label da barra de menu.
-struct UsagePopover: View {
+struct ClaudeUsageContent: View {
     @ObservedObject var store: UsageStore
-    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         let state = store.state
         let now = store.now
 
         VStack(alignment: .leading, spacing: 14) {
-            Text("Claude Code")
-                .font(.headline)
-
             if state.hasData {
                 HStack(alignment: .top, spacing: 8) {
                     UsageRing(title: "5 horas", window: state.fiveHour, now: now)
@@ -76,18 +72,8 @@ struct UsagePopover: View {
                 }
             }
 
-            HStack {
-                Button("Configurações") {
-                    NSApp.activate()
-                    openSettings()
-                }
-                Spacer()
-                Button("Sair") { NSApp.terminate(nil) }
-            }
         }
         .font(.callout)
-        .padding(16)
-        .frame(width: 300)
         .onAppear {
             store.checkServer()
             store.tokens.refresh(window: state.fiveHour, force: true)

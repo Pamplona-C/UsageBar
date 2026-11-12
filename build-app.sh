@@ -3,13 +3,17 @@
 # Uso: ./build-app.sh [--no-open | --package-only]
 #   --no-open       instala sem abrir o app
 #   --package-only  só gera .build/app/UsageBar.app, sem instalar (usado no GitHub Actions)
-# A versão vem de VERSION (ex.: VERSION=0.2.0 ./build-app.sh); o padrão é 0.1.0.
+# A versão vem de VERSION (ex.: VERSION=0.2.0 ./build-app.sh); o padrão é 0.2.0.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 name="UsageBar"
 bundle_id="com.gustavopamplona.UsageBar"
-version="${VERSION:-0.1.0}"
+version="${VERSION:-0.2.0}"
+if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+  echo "Versão inválida. Use um número como 0.2.0 ou 0.2.0-beta.1." >&2
+  exit 1
+fi
 install_dir="$HOME/Applications"
 app=".build/app/$name.app"
 
@@ -21,6 +25,7 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$binary" "$app/Contents/MacOS/$name"
 # Os mesmos scripts do terminal, usados pelo botão "Configurar statusline".
 cp -R scripts "$app/Contents/Resources/scripts"
+cp THIRD_PARTY_NOTICES.md "$app/Contents/Resources/THIRD_PARTY_NOTICES.md"
 rm "$app/Contents/Resources/scripts/make-icon.swift"
 swift scripts/make-icon.swift "$app/Contents/Resources/$name.icns"
 

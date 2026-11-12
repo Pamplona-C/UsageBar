@@ -3,18 +3,18 @@ import SwiftUI
 @main
 struct UsageBarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var store = UsageStore()
+    @StateObject private var accounts = UsageAccounts()
 
     var body: some Scene {
         MenuBarExtra {
-            UsagePopover(store: store)
+            UsagePopover(accounts: accounts)
         } label: {
-            MenuBarLabel(store: store)
+            AccountMenuBarLabel(accounts: accounts)
         }
         .menuBarExtraStyle(.window)
 
         Settings {
-            SettingsView(store: store)
+            AccountSettingsView(accounts: accounts)
         }
     }
 }
