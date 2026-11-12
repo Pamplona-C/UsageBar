@@ -1,9 +1,13 @@
-# UsageBar — app de barra de menu do macOS para consumo do Claude Code
+# UsageBar — app de barra de menu do macOS para consumo do Claude Code e Codex
 
 ## Objetivo
 App nativo para macOS que fica **apenas na barra de menu** (sem ícone no Dock, sem janela principal) e mostra o consumo dos limites do Claude Code:
-- Label na barra: percentual da janela de 5h (ex.: `42%`) + indicador de cor do limite semanal.
+- Label na barra: símbolos e percentuais de Claude e Codex simultaneamente, cada um com indicador de cor da segunda janela.
 - Popover ao clicar: janela de 5h e semanal (percentual, barra de progresso, horário de reset), "atualizado há X min", botões de Configurações e Sair.
+
+Desde 12/11/2026, também acompanha o **Codex**, com a proposta C aprovada: símbolos de Claude e ChatGPT como atalhos
+no topo do popover. A seleção alterna os detalhes; a barra de menu mostra os dois serviços simultaneamente. Cada serviço tem seu próprio estado/cache. O Codex usa
+`codex app-server` e o login do CLI, sem ler credenciais. Detalhes em `docs/codex.md`.
 
 ## Stack e decisões fixas
 - Swift 5.9+, SwiftUI, `MenuBarExtra` com `.menuBarExtraStyle(.window)`.
@@ -84,7 +88,8 @@ Claude Code ──stdin JSON──> ~/.claude/usagebar-bridge.sh ──grava─�
 **Critério de aceite:** os números do card batem com uma soma independente dos históricos.
 
 ## Fora de escopo (por enquanto)
-Histórico do percentual e projeções, custo em R$/US$, múltiplas contas, notificações, Codex e outros CLIs.
+Histórico do percentual e projeções, custo em R$/US$, múltiplas contas do mesmo serviço, notificações, tokens do Codex
+e outros CLIs além de Claude Code e Codex.
 
 ## Como trabalhar comigo
 - Antes de cada fase, apresente um plano curto (arquivos que vai criar ou alterar) e espere meu ok.
