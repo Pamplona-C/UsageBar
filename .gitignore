@@ -2,3 +2,30 @@
 .swiftpm/
 .DS_Store
 .superpowers/
+
+# Credenciais, dados locais e relatórios privados de auditoria.
+.env
+.env.*
+!.env.example
+.claude/
+.codex/
+.aws/
+.security-audit/
+*.pem
+*.key
+*.p12
+*.pfx
+*.mobileprovision
+auth.json
+credentials.json
+state.json
+settings.json.bak-*
+*.bak
+*.log
+
+# Artefatos de distribuição são anexos de release, não código-fonte.
+*.app/
+*.dSYM/
+*.zip
+xcuserdata/
+__pycache__/

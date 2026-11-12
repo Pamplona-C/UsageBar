@@ -3,6 +3,7 @@
 # Uso: uninstall-bridge.sh [--yes]
 #   --yes  não pergunta antes de alterar o settings.json (o app já confirmou com você)
 set -euo pipefail
+umask 077
 
 claude_dir="${USAGEBAR_CLAUDE_DIR:-$HOME/.claude}"
 settings="$claude_dir/settings.json"
@@ -10,17 +11,17 @@ bridge="$claude_dir/usagebar-bridge.sh"
 data_dir="$claude_dir/usagebar"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-json() { osascript -l JavaScript "$script_dir/lib/statusline-json.js" "$@"; }
+source "$script_dir/lib/bridge-common.sh"
+usagebar_check_paths
 
-bridge_command="$bridge"
-[[ "$bridge" == *" "* ]] && bridge_command="\"$bridge\""
+json() { osascript -l JavaScript "$script_dir/lib/statusline-json.js" "$@"; }
 
 remove_bridge_files() {
   rm -f "$bridge" "$data_dir/original-statusline.json" "$data_dir/original-command" \
     "$data_dir/settings-created" "$data_dir"/.state.*
 }
 
-if [ "$(json get-command "$settings")" != "$bridge_command" ]; then
+if ! usagebar_is_bridge_command "$(json get-command "$settings")" "$bridge"; then
   remove_bridge_files
   echo "O statusLine não aponta para o bridge. settings.json não foi alterado."
   exit 0
@@ -33,13 +34,12 @@ if [ ! -f "$data_dir/original-statusline.json" ]; then
 fi
 original="$(cat "$data_dir/original-statusline.json")"
 
-backup="$settings.bak-$(date +%Y%m%d-%H%M%S)"
 echo "Isto vai:"
-echo "  1. criar o backup $backup"
+echo "  1. criar um backup privado $settings.bak-…"
 if [ "$original" = "null" ]; then
   echo "  2. remover o statusLine (não havia um antes do UsageBar)"
 else
-  echo "  2. restaurar o statusLine original: $(cat "$data_dir/original-command")"
+  echo "  2. restaurar o statusLine original sem exibir o comando"
 fi
 
 if [ "${1:-}" != "--yes" ]; then
@@ -50,8 +50,9 @@ if [ "${1:-}" != "--yes" ]; then
   fi
 fi
 
-cp -p "$settings" "$backup"
+usagebar_backup_settings
 json restore "$settings" "$original"
+chmod 600 "$settings"
 
 # settings.json foi criado pelo instalador e voltou a ficar vazio: volta a não existir.
 if [ -f "$data_dir/settings-created" ] && [ "$(cat "$settings")" = "{}" ]; then

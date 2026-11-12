@@ -156,6 +156,78 @@ final class BridgeScriptsTests: XCTestCase {
         XCTAssertFalse(state.isEmpty)
     }
 
+    func testManagedFilesAndBackupsArePrivate() throws {
+        try settingsWithStatusline.write(to: settings, atomically: true, encoding: .utf8)
+        XCTAssertEqual(try script("install-bridge.sh", "--yes").status, 0)
+        XCTAssertEqual(try runBridge(payload: Fixture.data()).status, 0)
+        for url in [dataDir, bridge] {
+            let mode = try FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as? Int
+            XCTAssertEqual(mode.map { $0 & 0o777 }, 0o700)
+        }
+        for url in [settings, dataDir.appendingPathComponent("state.json"),
+                    dataDir.appendingPathComponent("original-command"),
+                    dataDir.appendingPathComponent("original-statusline.json")] + (try backups()).map({ claudeDir.appendingPathComponent($0) }) {
+            let mode = try FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as? Int
+            XCTAssertEqual(mode.map { $0 & 0o777 }, 0o600)
+        }
+    }
+
+    func testSpecialPathCharactersAreNotExecutedByTheShell() throws {
+        let originalDirectory = claudeDir!
+        claudeDir = originalDirectory.appendingPathComponent("Bridge's $(touch PWNED) `literal` \"quoted\"; path")
+        defer { claudeDir = originalDirectory }
+        try FileManager.default.createDirectory(at: claudeDir, withIntermediateDirectories: true)
+        try settingsWithStatusline.write(to: settings, atomically: true, encoding: .utf8)
+        XCTAssertEqual(try script("install-bridge.sh", "--yes").status, 0)
+        let savedSettings = try Data(contentsOf: settings)
+        let bridged = try runBridge(payload: Fixture.data(), cwd: claudeDir)
+        XCTAssertEqual(bridged.status, 0, bridged.stderr)
+        XCTAssertEqual(bridged.stdout, "ORIGINAL\n")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: claudeDir.appendingPathComponent("PWNED").path))
+        XCTAssertEqual(try script("install-bridge.sh", "--yes").status, 0)
+        XCTAssertEqual(try Data(contentsOf: settings), savedSettings)
+        XCTAssertEqual(try script("uninstall-bridge.sh", "--yes").status, 0)
+        XCTAssertEqual(try String(contentsOf: settings), settingsWithStatusline)
+    }
+
+    func testSymlinkedDataDirectoryIsRejectedWithoutChangingSettings() throws {
+        try settingsWithStatusline.write(to: settings, atomically: true, encoding: .utf8)
+        let target = claudeDir.appendingPathComponent("unrelated")
+        try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: dataDir, withDestinationURL: target)
+        let result = try script("install-bridge.sh", "--yes")
+        XCTAssertNotEqual(result.status, 0)
+        XCTAssertEqual(try String(contentsOf: settings), settingsWithStatusline)
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: target.path).isEmpty)
+    }
+
+    func testInstallAndUninstallCreateDistinctBackups() throws {
+        try settingsWithStatusline.write(to: settings, atomically: true, encoding: .utf8)
+        XCTAssertEqual(try script("install-bridge.sh", "--yes").status, 0)
+        XCTAssertEqual(try script("uninstall-bridge.sh", "--yes").status, 0)
+        XCTAssertEqual(try backups().count, 2)
+    }
+
+    func testLegacyQuotedBridgeIsMigratedWithoutSavingItAsTheOriginal() throws {
+        let originalDirectory = claudeDir!
+        claudeDir = originalDirectory.appendingPathComponent("legacy space")
+        defer { claudeDir = originalDirectory }
+        try FileManager.default.createDirectory(at: claudeDir, withIntermediateDirectories: true)
+        try settingsWithStatusline.write(to: settings, atomically: true, encoding: .utf8)
+        XCTAssertEqual(try script("install-bridge.sh", "--yes").status, 0)
+        let savedOriginal = try Data(contentsOf: dataDir.appendingPathComponent("original-command"))
+        var json = try JSONSerialization.jsonObject(with: Data(contentsOf: settings)) as! [String: Any]
+        var status = json["statusLine"] as! [String: Any]
+        status["command"] = "\"\(bridge.path)\""
+        json["statusLine"] = status
+        try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]).write(to: settings)
+        XCTAssertEqual(try script("install-bridge.sh", "--yes").status, 0)
+        XCTAssertEqual(try Data(contentsOf: dataDir.appendingPathComponent("original-command")), savedOriginal)
+        XCTAssertEqual(try runBridge(payload: Fixture.data()).stdout, "ORIGINAL\n")
+        XCTAssertEqual(try script("uninstall-bridge.sh", "--yes").status, 0)
+        XCTAssertEqual(try statusLine()?["command"] as? String, "cat > /dev/null; echo ORIGINAL")
+    }
+
     // MARK: - Ajudantes
 
     private struct Result {
@@ -170,7 +242,8 @@ final class BridgeScriptsTests: XCTestCase {
 
     /// Como o Claude Code: o `command` roda num shell, com o JSON no stdin.
     private func runBridge(payload: Data, cwd: URL? = nil) throws -> Result {
-        try run("/bin/sh", ["-c", bridge.path], stdin: payload, cwd: cwd)
+        let command = try XCTUnwrap(statusLine()?["command"] as? String)
+        return try run("/bin/sh", ["-c", command], stdin: payload, cwd: cwd)
     }
 
     private func run(_ executable: String, _ arguments: [String], stdin: Data, cwd: URL? = nil) throws -> Result {

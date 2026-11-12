@@ -1,6 +1,7 @@
 #!/bin/bash
 # Bridge do UsageBar: grava o JSON que o Claude Code envia à statusline e encadeia a statusline original.
 # Instalado por install-bridge.sh em ~/.claude/usagebar-bridge.sh. Não faz parsing: quem lê o JSON é o app.
+umask 077
 
 data_dir="$(dirname "${BASH_SOURCE[0]}")/usagebar"
 payload="$(cat)"

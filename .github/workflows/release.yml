@@ -7,13 +7,21 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
+  security:
+    uses: ./.github/workflows/security.yml
+
   release:
+    needs: security
     runs-on: macos-15
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Testes
         run: swift test
@@ -27,7 +35,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" UsageBar.zip \
-            --title "UsageBar $GITHUB_REF_NAME" \
-            --generate-notes \
-            --notes "Baixe o UsageBar.zip, descompacte e mova o UsageBar.app para ~/Applications. O app não é assinado com Developer ID: antes de abrir pela primeira vez, rode \`xattr -dr com.apple.quarantine ~/Applications/UsageBar.app\` (detalhes na seção Gatekeeper do README)."
+          notes="docs/releases/${GITHUB_REF_NAME}.md"
+          if [ -f "$notes" ]; then
+            gh release create "$GITHUB_REF_NAME" UsageBar.zip \
+              --title "UsageBar $GITHUB_REF_NAME" --notes-file "$notes"
+          else
+            gh release create "$GITHUB_REF_NAME" UsageBar.zip \
+              --title "UsageBar $GITHUB_REF_NAME" --generate-notes \
+              --notes "Baixe o UsageBar.zip, descompacte e mova o UsageBar.app para ~/Applications. O app usa assinatura ad-hoc; consulte o README para informações sobre o Gatekeeper."
+          fi
