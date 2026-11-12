@@ -27,8 +27,11 @@ enum ClaudeLogin {
                     continuation.resume(returning: .claudeNotFound)
                     return
                 }
-                let url = FileManager.default.temporaryDirectory.appendingPathComponent("UsageBar-login.command")
+                let directory = FileManager.default.temporaryDirectory.appendingPathComponent("UsageBar-Claude-\(UUID().uuidString)")
+                let url = directory.appendingPathComponent("Conectar Claude.command")
                 do {
+                    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
+                                                            attributes: [.posixPermissions: 0o700])
                     try script(claude: claude).write(to: url, atomically: true, encoding: .utf8)
                     try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: url.path)
                 } catch {

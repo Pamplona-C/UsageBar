@@ -53,15 +53,15 @@ struct UsageWindow: Codable, Equatable {
     }
 
     init(usedPercentage: Double? = nil, resetsAt: Date? = nil) {
-        self.usedPercentage = usedPercentage
+        self.usedPercentage = UsageValidation.percentage(usedPercentage)
         self.resetsAt = resetsAt
     }
 
     // `resets_at` é decodificado à mão para não depender da `dateDecodingStrategy` de quem decodifica.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        usedPercentage = container.lenient(Double.self, forKey: .usedPercentage)
-        resetsAt = container.lenient(Double.self, forKey: .resetsAt).map(Date.init(timeIntervalSince1970:))
+        usedPercentage = UsageValidation.percentage(container.lenient(Double.self, forKey: .usedPercentage))
+        resetsAt = UsageValidation.resetDate(container.lenient(Double.self, forKey: .resetsAt))
     }
 
     func encode(to encoder: Encoder) throws {

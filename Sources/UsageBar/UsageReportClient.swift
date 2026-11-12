@@ -1,5 +1,4 @@
 import Foundation
-import os
 
 /// Consulta o uso real no servidor rodando o `/usage` do próprio Claude Code.
 ///
@@ -58,6 +57,8 @@ enum UsageReportClient {
             return .failure(.launchFailed(reason))
         case .timedOut:
             return .failure(.timedOut)
+        case .outputTooLarge:
+            return .failure(.failed("O Claude Code devolveu uma saída maior que o limite de segurança."))
         case .exited(let status, let stdout, let stderr):
             do {
                 return .success(try UsageReport.parse(stdout))
@@ -93,57 +94,7 @@ enum UsageReportClient {
         return "O Claude Code terminou com o código \(status)."
     }
 
-    // MARK: - Processo
-
-    private enum Execution {
-        case launchFailed(String)
-        case timedOut
-        case exited(Int32, stdout: Data, stderr: Data)
-    }
-
-    private final class Buffer: @unchecked Sendable {
-        var data = Data()
-    }
-
-    private static func execute(_ executable: URL, _ arguments: [String], timeout: TimeInterval) -> Execution {
-        let process = Process()
-        process.executableURL = executable
-        process.arguments = arguments
-        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
-        process.standardInput = FileHandle.nullDevice
-        let stdout = Pipe()
-        let stderr = Pipe()
-        process.standardOutput = stdout
-        process.standardError = stderr
-
-        do {
-            try process.run()
-        } catch {
-            return .launchFailed(error.localizedDescription)
-        }
-
-        let timedOut = OSAllocatedUnfairLock(initialState: false)
-        let deadline = DispatchWorkItem {
-            guard process.isRunning else { return }
-            timedOut.withLock { $0 = true }
-            process.terminate()
-        }
-        DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: deadline)
-
-        // O stderr é lido em paralelo para um pipe cheio não travar o processo.
-        let errors = Buffer()
-        let group = DispatchGroup()
-        group.enter()
-        DispatchQueue.global().async {
-            errors.data = stderr.fileHandleForReading.readDataToEndOfFile()
-            group.leave()
-        }
-        let output = stdout.fileHandleForReading.readDataToEndOfFile()
-        group.wait()
-        process.waitUntilExit()
-        deadline.cancel()
-
-        if timedOut.withLock({ $0 }) { return .timedOut }
-        return .exited(process.terminationStatus, stdout: output, stderr: errors.data)
+    private static func execute(_ executable: URL, _ arguments: [String], timeout: TimeInterval) -> BoundedProcess.Output {
+        BoundedProcess.run(executable, arguments, timeout: timeout)
     }
 }

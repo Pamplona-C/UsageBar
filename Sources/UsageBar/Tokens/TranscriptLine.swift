@@ -10,7 +10,11 @@ struct TokenCount: Codable, Equatable {
     static let zero = TokenCount(total: 0, written: 0)
 
     static func + (lhs: TokenCount, rhs: TokenCount) -> TokenCount {
-        TokenCount(total: lhs.total + rhs.total, written: lhs.written + rhs.written)
+        func sum(_ a: Int, _ b: Int) -> Int {
+            let (value, overflow) = a.addingReportingOverflow(b)
+            return overflow ? (b >= 0 ? Int.max : Int.min) : value
+        }
+        return TokenCount(total: sum(lhs.total, rhs.total), written: sum(lhs.written, rhs.written))
     }
 }
 
@@ -34,7 +38,14 @@ enum TranscriptLine {
         let text = timestamp.replacingOccurrences(of: #"\.\d+"#, with: "", options: .regularExpression)
         guard let date = try? Date(text, strategy: .iso8601) else { return nil }
         let written = usage.output ?? 0
-        let total = (usage.input ?? 0) + (usage.cacheCreation ?? 0) + (usage.cacheRead ?? 0) + written
+        let counters = [usage.input ?? 0, usage.cacheCreation ?? 0, usage.cacheRead ?? 0, written]
+        var total = 0
+        for counter in counters {
+            guard counter >= 0 else { return nil }
+            let (next, overflow) = total.addingReportingOverflow(counter)
+            guard !overflow else { return nil }
+            total = next
+        }
         return TokenEvent(key: "\(id)|\(entry.requestId ?? "")", date: date,
                           count: TokenCount(total: total, written: written))
     }

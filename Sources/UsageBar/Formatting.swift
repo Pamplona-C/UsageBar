@@ -3,7 +3,7 @@ import Foundation
 /// Textos exibidos na barra e no popover.
 enum Format {
     static func percent(_ value: Double?) -> String {
-        guard let value else { return "--%" }
+        guard let value = UsageValidation.percentage(value) else { return "--%" }
         return "\(Int(value.rounded()))%"
     }
 
